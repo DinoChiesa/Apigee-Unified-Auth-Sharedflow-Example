@@ -1,0 +1,6 @@
+<APIProxy revision='1' name='example-oauth2-cc'>
+  <ConfigurationVersion minorVersion='0' majorVersion='4'/>
+  <CreatedBy>dino</CreatedBy>
+  <Description>Dispense OAuth v2.0 Bearer tokens for client_credentials grant type.</Description>
+  <DisplayName>example-oauth2-cc</DisplayName>
+</APIProxy>

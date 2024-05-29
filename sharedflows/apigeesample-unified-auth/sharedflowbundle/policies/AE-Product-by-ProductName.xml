@@ -1,0 +1,5 @@
+<AccessEntity name='AE-Product-by-ProductName'>
+  <EntityType value='apiproduct' />
+  <EntityIdentifier type='apiproductname' ref='apigee.apiproduct.name' />
+  <OutputFormat>XML</OutputFormat>
+</AccessEntity>

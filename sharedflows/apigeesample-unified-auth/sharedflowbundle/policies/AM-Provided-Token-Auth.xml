@@ -1,0 +1,6 @@
+<AssignMessage name='AM-Provided-Token-Auth'>
+  <AssignVariable>
+    <Name>provided_auth</Name>
+    <Value>token</Value>
+  </AssignVariable>
+</AssignMessage>

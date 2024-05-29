@@ -1,0 +1,15 @@
+<RaiseFault name='RF-Unacceptable-Auth'>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <FaultResponse>
+        <Set>
+    <Payload contentType="application/json">{
+  "error" :  {
+    "code" : 10019,
+    "message" : "The authentication provided was unacceptable."
+  }
+}
+</Payload>
+            <StatusCode>401</StatusCode>
+        </Set>
+    </FaultResponse>
+</RaiseFault>

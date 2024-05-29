@@ -1,0 +1,16 @@
+<RaiseFault name='RF-Unsupported-Authentication'>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <FaultResponse>
+        <Set>
+    <Payload contentType="application/json">{
+  "error" :  {
+    "code" : 10012,
+    "message" : "Incorrect authentication was found for the request."
+  }
+}
+</Payload>
+            <StatusCode>401</StatusCode>
+            <ReasonPhrase>Unauthorized</ReasonPhrase>
+        </Set>
+    </FaultResponse>
+</RaiseFault>

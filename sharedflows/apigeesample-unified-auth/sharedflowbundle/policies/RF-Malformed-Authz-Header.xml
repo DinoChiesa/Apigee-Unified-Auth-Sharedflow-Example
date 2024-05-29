@@ -1,0 +1,16 @@
+<RaiseFault name='RF-Malformed-Authz-Header'>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <FaultResponse>
+        <Set>
+    <Payload contentType="application/json">{
+  "error" :  {
+    "code" : 10017,
+    "message" : "Malformed authorization header."
+  }
+}
+</Payload>
+            <StatusCode>401</StatusCode>
+            <ReasonPhrase>Unauthorized</ReasonPhrase>
+        </Set>
+    </FaultResponse>
+</RaiseFault>

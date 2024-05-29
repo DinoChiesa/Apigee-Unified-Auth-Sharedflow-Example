@@ -1,0 +1,16 @@
+<RaiseFault name='RF-Missing-Required-Authentication'>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <FaultResponse>
+        <Set>
+    <Payload contentType="application/json">{
+  "error" :  {
+    "code" : 10016,
+    "message" : "No authentication was found for the request."
+  }
+}
+</Payload>
+            <StatusCode>401</StatusCode>
+            <ReasonPhrase>Unauthorized</ReasonPhrase>
+        </Set>
+    </FaultResponse>
+</RaiseFault>

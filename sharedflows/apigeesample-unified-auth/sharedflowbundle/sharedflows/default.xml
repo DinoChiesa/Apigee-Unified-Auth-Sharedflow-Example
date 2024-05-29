@@ -1,0 +1,67 @@
+<SharedFlow name="default">
+
+  <!-- check for APIKey or Token, fail if neither -->
+  <Step>
+    <Name>RF-Missing-Required-Authentication</Name>
+    <Condition>(request.header.x-apikey = null) and (request.header.authorization = null)</Condition>
+  </Step>
+
+  <!-- if both are passed, that's also an error -->
+  <Step>
+    <Name>RF-Unsupported-Authentication</Name>
+    <Condition>(request.header.x-apikey != null) and (request.header.authorization != null)</Condition>
+  </Step>
+
+  <!-- if token, then check for appropriate format -->
+  <Step>
+    <Name>EV-Token-From-Authz-Header</Name>
+    <Condition>(request.header.authorization != null)</Condition>
+  </Step>
+  <Step>
+    <Name>RF-Malformed-Authz-Header</Name>
+    <Condition>(request.header.authorization != null) and (extracted.access_token = null)</Condition>
+  </Step>
+
+
+  <!-- if token, verify it, and set the variable indicating token was provided -->
+  <Step>
+    <Name>OAuthV2-Verify-Access-Token</Name>
+    <Condition>extracted.access_token != null</Condition>
+  </Step>
+  <Step>
+    <Name>AM-Provided-Token-Auth</Name>
+    <Condition>extracted.access_token != null</Condition>
+  </Step>
+
+  <!-- if APIKey, verify it, and set the variable indicating apikey was provided -->
+  <Step>
+    <Name>VA-Verify-API-Key</Name>
+    <Condition>extracted.access_token = null</Condition>
+  </Step>
+  <Step>
+    <Name>AM-Provided-APIKey-Auth</Name>
+    <Condition>extracted.access_token = null</Condition>
+  </Step>
+
+  <!-- get the required auth for the product -->
+  <Step>
+    <Name>AE-Product-by-ProductName</Name>
+  </Step>
+  <Step>
+    <Name>EV-Product-Required-Auth</Name>
+  </Step>
+
+  <!-- fail if the required auth is neither token nor apikey -->
+  <Step>
+    <Name>RF-Misconfigured-Product</Name>
+    <Condition>product.required-auth-variant != "token" and
+    product.required-auth-variant != "apikey"</Condition>
+  </Step>
+
+  <!-- fail if the required auth does not match the provided auth -->
+  <Step>
+    <Name>RF-Unacceptable-Auth</Name>
+    <Condition>product.required-auth-variant != provided_auth</Condition>
+  </Step>
+
+</SharedFlow>

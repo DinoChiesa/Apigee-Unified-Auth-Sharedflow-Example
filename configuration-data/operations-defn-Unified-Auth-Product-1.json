@@ -1,0 +1,49 @@
+{
+  "operationConfigs": [
+    {
+      "apiSource": "example-proxy-1",
+      "operations": [
+        {
+          "resource": "/",
+          "methods": [
+            "GET"
+          ]
+        }
+      ]
+    },
+    {
+      "apiSource": "example-proxy-1",
+      "operations": [
+        {
+          "resource": "/*",
+          "methods": [
+            "GET"
+          ]
+        }
+      ]
+    },
+    {
+      "apiSource": "example-proxy-2",
+      "operations": [
+        {
+          "resource": "/",
+          "methods": [
+            "GET"
+          ]
+        }
+      ]
+    },
+    {
+      "apiSource": "example-proxy-2",
+      "operations": [
+        {
+          "resource": "/*",
+          "methods": [
+            "GET"
+          ]
+        }
+      ]
+    }
+  ],
+  "operationConfigType": "proxy"
+}

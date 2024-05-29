@@ -1,0 +1,9 @@
+<ExtractVariables name='EV-Product-Required-Auth'>
+  <Source>AccessEntity.AE-Product-by-ProductName</Source>
+  <VariablePrefix>product</VariablePrefix>
+  <XMLPayload>
+    <Variable name='required-auth-variant' type='string'>
+      <XPath>/ApiProduct/Attributes/Attribute[Name='required-auth-variant']/Value/text()</XPath>
+    </Variable>
+  </XMLPayload>
+</ExtractVariables>

@@ -1,0 +1,14 @@
+<SharedFlowBundle revision="1" name="apigeesample-unified-auth">
+  <ConfigurationVersion minorVersion="0" majorVersion="4"/>
+  <CreatedAt>1433453156684</CreatedAt>
+  <CreatedBy>dchiesa@google.com</CreatedBy>
+  <Description/>
+  <DisplayName>apigeesample-unified-auth</DisplayName>
+  <LastModifiedAt>1486155766526</LastModifiedAt>
+  <LastModifiedBy>dchiesa@google.com</LastModifiedBy>
+  <subType>SharedFlow</subType>
+  <Policies/>
+  <SharedFlows>
+    <SharedFlow>default</SharedFlow>
+  </SharedFlows>
+</SharedFlowBundle>
