@@ -136,8 +136,9 @@ maybe_import_and_deploy_sharedflow "apigeesample-unified-auth"
 
 for pname in "${PROXY_NAMES[@]}"; do
     printf "Importing and Deploying the Apigee proxy [%s]...\n" "$pname"
-    maybe_import_and_deploy_apiproxy "$pname"
+    maybe_import_and_deploy_apiproxy "$pname" &
 done
+wait
 
 echo "Checking and possibly Creating API Products..."
 create_apiproduct "${PRODUCT_NAME}-1" "apikey"
