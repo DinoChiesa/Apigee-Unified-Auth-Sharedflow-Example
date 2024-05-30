@@ -1,7 +1,7 @@
 # Unified Authentication Example
 
 This sample shows how you can configure an Apigee SharedFlow to
-handle either APIKey or OauthV2 token credentials for inbound requests,
+handle either APIKey or OAuthV2 token credentials for inbound requests,
 depending on a custom attribute on the API Product.
 
 ## About API Products
@@ -34,58 +34,65 @@ runtime to check the credential type that must be used in inbound requests.
 ## Resolving the API Proxy
 
 When a caller makes a request to an Apigee endpoint, Apigee checks the left-most
-path segment for a match, against all the "base path" for each of the API proxies configured in the
-environment. When a match is found, THAT API proxy receives the inbound request.
-
+path segment for a match, against the "base path" for each of the API
+proxies configured in the environment. When a match is found, THAT API proxy
+receives the inbound request.
 
 ## Resolving the API Product
 
-But in Apigee, the API Product is the unit of consumption.  Resolving the API product is done via the credential that the inbound request carries.
+But in Apigee, the API Product is the unit of consumption.  Resolving the API
+product is done via _the credential_ that the inbound request carries.
 
-Usually the credential is an API Key, or an OAuthV2 access token.
-Your proxy needs to verify the credentials passed on the request - via either
+Usually the credential is an API Key, or an OAuthV2 access token.  To resolve
+the API Product, your proxy needs to verify the credentials passed on the
+request - via either
 [VerifyAPIKey](https://cloud.google.com/apigee/docs/api-platform/reference/policies/verify-api-key-policy)
 or
-[OAuthV2/VerifyAccessToken](https://cloud.google.com/apigee/docs/api-platform/reference/policies/oauthv2-policy#verifyaccesstoken).
+[OAuthV2/VerifyAccessToken](https://cloud.google.com/apigee/docs/api-platform/reference/policies/oauthv2-policy#verifyaccesstoken).  It can make this call directly, or indirectly, via a sharedflow.
 
 When you use one of those policy types, Apigee checks the credential and looks up the set of API
 Products it is authorized for. (In the simple case, an app is authorized for a single API Product,
 but Apigee allows apps to have access to more than one product.)
 
-Then, Apigee
-checks that the current executing operation - using the REST model, this is a
-verb+path combination - is included within one of the API Products that is
-authorized for that credential. If not, then the request is rejected.
+Then, Apigee checks that the current executing operation - using the REST model,
+this is a verb+path combination - is included within one of the API Products
+that is authorized for that credential. If not, then the request is rejected.
 
-If the verb+path is included in the API Product, then the request is allowed.
-Apigee as a side effect, sets the context variable `apigee.apiproduct_name`.
+If the verb+path is included in at least one API Product, then the request is allowed.
+Apigee as a side effect, sets the context variable `apigee.apiproduct_name` to the name of the product that
+the combination of {request, credential} resolved to.
 
-A proxy can then retrieve arbitrary attributes on the product, via an ExtrtactVariables policy type.
+At that point, a proxy can retrieve arbitrary attributes on the product, via a
+combination of the AccessEntity and ExtractVariables policy types.
 
 
 ## A General way to Enforce different Credential types
 
 Suppose you would like to have a single sharedflow that enforces credential validation.
 
-If you support a single type of credential, let's say only API Keys, then it's easy.  The sharedflow would contain a single policy type, VerifyAPIKey, and that's it.
+If you support a single type of credential, let's say only API Keys, then it's
+easy.  The sharedflow would contain a single policy type, VerifyAPIKey, and
+that's it.
 
-But if you want to support multiple different credential types, but _only one type per product_, then you need a different approach.
+But if you want to support multiple different credential types, but _only one
+type per product_, then you need a different approach.
 
 Suppose you want to have a single sharedflow that enforces credential
 validation, and it must either validate an API Key, or validate a Token,
-depending on the API Product in use.
+depending on the API Product in use. There will be exactly ONE type of
+credential allowed by any API Product.
 
-A naive attempt might be:
+A naive attempt to support this might be:
 
 1. lookup the credential type required by the API product
 
 2. conditionally call either VerifyAPIKey or VerifyAccessToken, depending on that setting.
 
-
-Easy, right?  But not so fast.  The API Product cannot be known until AFTER the
-credential is verified - AFTER one of VerifyAPIKey or VerifyAccessToken
-executes.  So in the approach above, the lookup step cannot succeed until the
-validation step has succeeded. Impass.
+Simple, right?  But not so fast.  The API Product cannot be known until AFTER
+the credential is verified - AFTER one of VerifyAPIKey or VerifyAccessToken
+executes.  So in the approach above, the lookup step (the first step) cannot
+succeed until the validation step (the second step) has succeeded. But the
+second step needs the result of the first step.  Impass.
 
 So your logic needs to be a little more clever. But you can do it.
 
@@ -100,17 +107,30 @@ So your logic needs to be a little more clever. But you can do it.
 3. Once the credential is verified by either of the above methods, retrieve the
    custom attribute on the API Product called `required-auth-variant`.
 
-4. Compare the required auth variant to the actually p rovided auth variant.
-   If they do not match, return an error.
+4. Compare the required auth variant to the auth variant that was actually used
+   in the request.  If they do not match, return an error.
 
 
-This can be extended to other "variants" of credential as well.
 
-## An example
+This basic idea can be extended to other "variants" of credential as well.  For
+example one might imagine supporting JWT signed by different signers.  To
+support this you'd need to add the logic to do the right thing, for each
+different variant.
+
+## Implementing the idea
+
+A Sharedflow is a good way to implement this sequence of steps.  It's a common
+sequence that every API might need, so it ought to be in a sharedflow.
+
+What's more, it ought to be mandatory. You can designate a specific sharedflow
+on the Pre-Proxy flowhook, so that it always executes for every proxy.  (This
+example does not show this. )
+
+## A Working Example
 
 This repo contains an example that shows how this works.
 
-You need the following pre-requisites: 
+You need the following pre-requisites:
 - an Apigee X project
 - a bash-compatible shell
 - [apigeecli](https://github.com/apigee/apigeecli/blob/main/docs/apigeecli.md)
@@ -129,7 +149,7 @@ export PROJECT=my-apigee-org
 ./setup-unified-auth-illustration.sh
 ```
 
-This script sets up the following:
+The setup script sets up the following:
  - the unified-auth sharedflow
  - Two example API proxies that call this sharedflow
  - An API proxy that dispenses OAuthV2 tokens for client_credentials grant type
@@ -138,46 +158,51 @@ This script sets up the following:
  - an example developer
  - Two apps, registered to that developer, each one authorized for one of the above products.
 
-When it exits, you will see this kind of output:
+This will take a few moments. When it completes, you will see this kind of output:
 ```
-App1:
-  CLIENT_ID=9ES5yAGgRwCbFQhoptsIr53rmIw2fE4zBivcOCWxxxeaBUAd
-  CLIENT_SECRET=YNDDy1kXzZGZWwcMpogUZUAEzb2hPxku7GoDMpwde2E2HioBtPG0YtmsJiT3xztF
-App2:
-  CLIENT_ID=eh7rhpEQJM7SObxoQZVOKaJlmzqqtrmTu9F76Wt326Mv02SD
-  CLIENT_SECRET=rFONNAUCmlCyt4869BKEn8L3RnMAXA7XlVosydOURu0WzOq4opkQNmaLF4afs0JO
+All the Apigee artifacts are successfully created.
+
+Credentials:
+
+  CLIENT_ID_FOR_APP1=UEX9CMCgfbQtONAUwzqMxUWNlBeITl
+  CLIENT_SECRET_FOR_APP1=Ogx9AecQL8rAMpnAc0VkBkKFP8ViJv
+
+  CLIENT_ID_FOR_APP2=TWtBCmV4xNGqJRDsRECPJXvkb8Y1p
+  CLIENT_SECRET_FOR_APP2=7yZTdyQ27FGB0GleZYloi78Csi18ka
+
+  ...
 ```
 
 After setting it up, you can demonstrate the various cases:
 
-| app  | authorized product | target proxy | credential | result |
-| ---- | ------------------ | ------------ | -----------| ------ |
-| app1 | product-1          | (doesn't matter) | apikey | success |
-| app1 | product-1          | (doesn't matter) | token  | reject |
-| app2 | product-2          | (doesn't matter) | apikey | reject |
-| app1 | product-2          | (doesn't matter) | token  | success |
+| case | app  | authorized product | target proxy | credential | result |
+| ---- | ---- | ------------------ | ------------ | -----------| ------ |
+| 1    | app1 | product-1          | (doesn't matter) | apikey | success |
+| 2    | app1 | product-1          | (doesn't matter) | token  | reject |
+| 3    | app2 | product-2          | (doesn't matter) | apikey | reject |
+| 4    | app1 | product-2          | (doesn't matter) | token  | success |
 
 
-For example of sending an API Key as a crdential, this succeeds:
-```
- curl -i $apigee/example-proxy-1/t1 \
-    -H "X-apikey:${CLIENT_ID_FOR_APP2}"
-```
-
-While this is rejected:
+For example, here is case #1.  The caller sends the API Key for App1 as a crdential.  This succeeds:
 ```
  curl -i $apigee/example-proxy-1/t1 \
     -H "X-apikey:${CLIENT_ID_FOR_APP1}"
 ```
 
-The first request is accepted because App1 is authorized on Product2,
-which has a custom attribute that says callers must use an API Key as a credential.
+Conversely,  this, case #3, is rejected:
+```
+ curl -i $apigee/example-proxy-1/t1 \
+    -H "X-apikey:${CLIENT_ID_FOR_APP2}"
+```
+
+The first request is accepted because App1 is authorized on Product1,
+which has a custom attribute that says callers must use _an API Key_ as a credential.
 
 The latter is rejected because App2 is authorized on Product2,
-which has a custom attribute that says callers must use a token as a credential.
+which has a custom attribute that says callers must use _a token_ as a credential.
 
 
-And the counter example.  This succeeds:
+And the counter example.  This is case #4, it succeeds:
 ```
  curl -i $apigee/example-oauth2-cc/token -d grant_type=client_credentials \
     -u "${CLIENT_ID_FOR_APP2}:${CLIENT_SECRET_FOR_APP2}"
@@ -187,7 +212,7 @@ And the counter example.  This succeeds:
     -H "Authorization: Bearer ${access_token}"
 ```
 
-While this is rejected:
+Conversely, this is case #2. The request is rejected:
 ```
  curl -i $apigee/example-oauth2-cc/token -d grant_type=client_credentials \
     -u "${CLIENT_ID_FOR_APP1}:${CLIENT_SECRET_FOR_APP2}"
@@ -198,11 +223,14 @@ While this is rejected:
 ```
 
 
-To have a closer look, you can turn on a debug session, to watch the execution
-of the sharedflow.  You can also use the Apigee UI to modify the value of the
-`required-auth-variant` custom attribute, and observe the effects. Remember that
-Apigee can cache the data for an App and an API Product, so changes you make via
-the UI may not be immediately effective in the runtime.
+To have a closer look at what's happening, you can turn on a debug session, to
+watch the execution of the sharedflow.  You can also use the Apigee UI to modify
+the value of the `required-auth-variant` custom attribute, and observe the
+effects. Remember that Apigee can cache the data for an App and an API Product,
+so changes you make via the UI may not be immediately effective in the runtime.
+
+
+And you can also try the edge cases, like passing neither a token nor a key, or passing both.
 
 
 ### Cleanup
