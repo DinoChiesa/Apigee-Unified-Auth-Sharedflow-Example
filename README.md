@@ -180,7 +180,7 @@ After setting it up, you can demonstrate the various cases:
 | 1    | app1 | product-1          | (doesn't matter) | apikey | success |
 | 2    | app1 | product-1          | (doesn't matter) | token  | reject |
 | 3    | app2 | product-2          | (doesn't matter) | apikey | reject |
-| 4    | app1 | product-2          | (doesn't matter) | token  | success |
+| 4    | app2 | product-2          | (doesn't matter) | token  | success |
 
 
 For example, here is case #1.  The caller sends the API Key for App1 as a crdential.  This succeeds:
