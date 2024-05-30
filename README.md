@@ -15,32 +15,19 @@ is the unit of packaging for APIs.
 Each API Product has a set of configuration data that can be used at runtime.
 This might be data that allows the API Proxy to behave differently, depending on
 the product that is being used to expose it. Gold, Silver, and Bronze products
-might each have a different rate limit, for example. Or different pricing
-levels. Or different target systems. Information about which data fields to include or
-exclude from a response. OAuth scopes. It's a very flexible model.
-
-
-### Custom Attributes on an API Product
-
-The set of configuration data for an API product is extensible, via a mechanism
-called "custom attributes".  These are name/value pairs that you can attach to
-various entities within Apigee, including API Products.
-
-This sample shows how you can attach a custom attribute called
-`required-auth-variant` to an API Product, then reference that attribute at
-runtime to check the credential type that must be used in inbound requests.
-
+might each have a different rate limit, for example. Even if the same API proxy
+is executing, the API Product will determine the rate limit.
 
 ## Resolving the API Proxy
 
 When a caller makes a request to an Apigee endpoint, Apigee checks the left-most
 path segment for a match, against the "base path" for each of the API
 proxies configured in the environment. When a match is found, THAT API proxy
-receives the inbound request.
+receives the inbound request. If no match is found, Apigee sends back a 404.
 
 ## Resolving the API Product
 
-But in Apigee, the API Product is the unit of consumption.  Resolving the API
+In Apigee, the API Product is the unit of consumption.  Resolving the API
 product is done via _the credential_ that the inbound request carries.
 
 Usually the credential is an API Key, or an OAuthV2 access token.  To resolve
@@ -58,13 +45,32 @@ Then, Apigee checks that the current executing operation - using the REST model,
 this is a verb+path combination - is included within one of the API Products
 that is authorized for that credential. If not, then the request is rejected.
 
-If the verb+path is included in at least one API Product, then the request is allowed.
-Apigee as a side effect, sets the context variable `apigee.apiproduct_name` to the name of the product that
-the combination of {request, credential} resolved to.
+If the verb+path is included in at least one API Product, then the request is
+allowed.  Apigee as a side effect, sets various context variables. For example, Apigee sets
+`apigee.apiproduct_name` to the name of the product that the combination of
+{request, credential} resolved to. The values of other configuration data from
+the API Product is are also exposed via context variables.
 
-At that point, a proxy can retrieve arbitrary attributes on the product, via a
-combination of the AccessEntity and ExtractVariables policy types.
+### Custom Attributes on an API Product
 
+There are specific "hard coded" data you can configure on an API product:
+- whether it is public or not  (to be exposed on a developer portal catalog)
+- which environments it is available in
+- the set of REST operations it authorizes
+- the product-wide rate limit
+- the supported set of OAuth scopes
+
+But what if you want to attach some other data? like different pricing
+levels. Or different target systems. Information about which data fields to include or
+exclude from a response.
+
+The set of configuration data for an API product is customizable, via a mechanism
+called "custom attributes".  Custom attributes are name/value pairs that you can attach to
+various entities within Apigee, including API Products.
+
+After verifying a credential and resolving an API Product, any of the data -
+either from the Apigee-defined schema or from your own custom attributes - can
+be retrieved in the message context, and used in handling the request.
 
 ## A General way to Enforce different Credential types
 
@@ -105,15 +111,17 @@ So your logic needs to be a little more clever. But you can do it.
    error.
 
 3. Once the credential is verified by either of the above methods, retrieve the
-   custom attribute on the API Product called `required-auth-variant`.
+   custom attribute on the API Product called `required-auth-variant`. This can
+   be done via a combination of the AccessEntity and ExtractVariables policy
+   types.
 
 4. Compare the required auth variant to the auth variant that was actually used
    in the request.  If they do not match, return an error.
 
 
 
-This basic idea can be extended to other "variants" of credential as well.  For
-example one might imagine supporting JWT signed by different signers.  To
+This basic idea can be extended to allow other "variants" of credential as well.
+For example one might imagine supporting JWT signed by different signers.  To
 support this you'd need to add the logic to do the right thing, for each
 different variant.
 
@@ -126,11 +134,16 @@ What's more, it ought to be mandatory. You can designate a specific sharedflow
 on the Pre-Proxy flowhook, so that it always executes for every proxy.  (This
 example does not show this. )
 
+
 ## A Working Example
 
 This repo contains an example that shows how this works.
 
-You need the following pre-requisites:
+The sample shows how you can attach a custom attribute called
+`required-auth-variant` to an API Product, then reference that attribute at
+runtime to check the credential type that must be used in inbound requests.
+
+To run this sample, you need the following pre-requisites:
 - an Apigee X project
 - a bash-compatible shell
 - [apigeecli](https://github.com/apigee/apigeecli/blob/main/docs/apigeecli.md)
@@ -141,7 +154,7 @@ The [Google Cloud Shell](https://cloud.google.com/shell) has all of these. You
 can run this from there, if you like.
 
 
-To deploy it , use the script:
+To deploy it, use the script:
 
 ```sh
 export APIGEE_ENV=my-environment
@@ -183,23 +196,33 @@ After setting it up, you can demonstrate the various cases:
 | 4    | app2 | product-2          | (doesn't matter) | token  | success |
 
 
-For example, here is case #1.  The caller sends the API Key for App1 as a crdential.  This succeeds:
+The following examples assume `$apigee` is a variable that holds the endpoint at
+which you can reach your API proxies. To set this, you might use something like
+this:
+
+```
+apigee=https://35.207.223.215.nip.io
+```
+
+Here is case #1.  The caller sends the API Key for App1 as a credential.  This succeeds:
 ```
  curl -i $apigee/example-proxy-1/t1 \
     -H "X-apikey:${CLIENT_ID_FOR_APP1}"
 ```
 
-Conversely,  this, case #3, is rejected:
+Conversely, this, case #3, is rejected:
 ```
  curl -i $apigee/example-proxy-1/t1 \
     -H "X-apikey:${CLIENT_ID_FOR_APP2}"
 ```
 
 The first request is accepted because App1 is authorized on Product1,
-which has a custom attribute that says callers must use _an API Key_ as a credential.
+which has a custom attribute that says callers must use _an API Key_ as a credential,
+and that is what the request used.
 
 The latter is rejected because App2 is authorized on Product2,
-which has a custom attribute that says callers must use _a token_ as a credential.
+which has a custom attribute that says callers must use _a token_ as a credential,
+but the request used an API key.
 
 
 And the counter example.  This is case #4, it succeeds:
@@ -225,12 +248,13 @@ Conversely, this is case #2. The request is rejected:
 
 To have a closer look at what's happening, you can turn on a debug session, to
 watch the execution of the sharedflow.  You can also use the Apigee UI to modify
-the value of the `required-auth-variant` custom attribute, and observe the
-effects. Remember that Apigee can cache the data for an App and an API Product,
-so changes you make via the UI may not be immediately effective in the runtime.
+the value of the `required-auth-variant` custom attribute on the API Products,
+and observe the effects. Remember that Apigee can cache the data for an App and
+an API Product, so changes you make via the UI may not be immediately effective
+in the runtime.
 
-
-And you can also try the edge cases, like passing neither a token nor a key, or passing both.
+And you can also try the edge cases, like passing neither a token nor a key, or
+passing both.
 
 
 ### Cleanup
