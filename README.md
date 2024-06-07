@@ -264,3 +264,21 @@ To remove the configuration from this example in your Apigee Organization, in yo
 ```bash
 ./clean-unified-auth-illustration.sh
 ```
+
+## Disclaimer
+
+This example is not an official Google product, nor is it part of an
+official Google product.
+
+
+## Support
+
+This example is open-source software, and is not a supported part of Apigee.  If
+you need assistance, you can try inquiring on [the Google Cloud Community forum
+dedicated to Apigee](https://goo.gle/apigee-community) There is no service-level
+guarantee for responses to inquiries posted to that site.
+
+## License
+
+This material is [Copyright 2024 Google LLC](./NOTICE).
+and is licensed under the [Apache 2.0 License](LICENSE).
